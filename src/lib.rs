@@ -18,15 +18,19 @@ impl<'a, T> LimitedWriter<'a, T> {
 
 impl<T: Write + ?Sized> fmt::Write for LimitedWriter<'_, T> {
     fn write_str(&mut self, s: &str) -> fmt::Result {
-        let mut i = 0usize;
-        while i < s.len() {
-            let len = len_utf8_at(&s, i);
-            if self.n + i + len > self.limit {
-                break;
+        if self.n + s.len() <= self.limit {
+            self.inner.write_str(&s)?;
+        } else {
+            let mut i = 0usize;
+            while i < s.len() {
+                let len = len_utf8_at(&s, i);
+                if self.n + i + len > self.limit {
+                    break;
+                }
+                i += len;
             }
-            i += len;
+            self.inner.write_str(&s[0..i])?;
         }
-        self.inner.write_str(&s[0..i])?;
         self.n += s.len();
         Ok(())
     }
